@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+This file is used by the publish/package process of your Web project. You can customize the behavior of this process
+by editing this MSBuild file. In order to learn more about this please visit https://go.microsoft.com/fwlink/?LinkID=208121. 
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <TimeStampOfAssociatedLegacyPublishXmlFile />
+    <EncryptedPassword>AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAR8UpWlcWwUqqEXGXLWH/lwAAAAACAAAAAAADZgAAwAAAABAAAABKag3peClKjHVtc7JUj+lqAAAAAASAAACgAAAAEAAAAMT681t4CV2Tkfju5Ex0q0+AAAAA2cS5IOr2fuNx+6kWCT5sDwKGp3pjxUMhlL0WBXB2vHrnWZQrEzVuXWG+2cXq2NvIOx2fjW72jhi9bMTWR9esKHuNEEDLIoU42tEcKh5tbmFNBTFj9R7mSvntZq8zI8RJJ5Ayj6HX47Dd42umibAa47ewu4HIvxvol6q3AKwieBMUAAAAj2cZmoVGiqUl++W3F3r5ybXcvus=</EncryptedPassword>
+    <History>True|2021-09-29T20:51:57.1892318Z;True|2021-09-29T22:27:54.2523114+02:00;True|2021-09-26T16:57:44.1879550+02:00;True|2021-09-20T19:20:27.9262146+02:00;True|2021-09-20T13:44:09.7908298+02:00;True|2021-09-20T13:24:32.0800783+02:00;True|2021-09-20T01:43:00.4568412+02:00;True|2021-09-20T00:50:31.7278962+02:00;True|2021-09-19T23:45:20.0581023+02:00;True|2021-09-19T23:14:24.1265507+02:00;True|2021-09-19T22:36:34.3270761+02:00;True|2021-09-19T22:27:49.5577380+02:00;</History>
+  </PropertyGroup>
+  <ItemGroup>
+    <DestinationConnectionStrings Include="DefaultConnection">
+      <Value>Data Source=tcp:techmania-serverdb.database.windows.net,1433%3bInitial Catalog=TechMania_Server_db%3bUser Id=dhalusek%40techmania-serverdb%3bPassword=Admin123%2a</Value>
+    </DestinationConnectionStrings>
+  </ItemGroup>
+</Project>

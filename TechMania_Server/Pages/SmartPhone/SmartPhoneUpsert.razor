@@ -1,0 +1,280 @@
+﻿@page "/smart-phone/create"
+@page "/smart-phone/edit/{Id:int}"
+@using Models
+@using Business.Repository.IRepository;
+@using TechMania_Server.Service.IService;
+@inject ISmartPhoneRepository SmartPhoneRepository
+@inject ISmartPhoneImagesRepository SmartPhoneImagesRepository
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+@inject IFileUpload FileUpload
+
+<div class="row mt-2 mb-5">
+    <h3 class="card-title text-info mb-3 ml-3">@Title SmartPhone</h3>
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <EditForm Model="SmartPhoneModel" OnValidSubmit="HandleSmartPhoneUpsert">
+                    <DataAnnotationsValidator />
+                    <div class="form-group">
+                        <label>Name</label>
+                        <InputText @bind-Value="SmartPhoneModel.Name" class="form-control"></InputText>
+                        <ValidationMessage For="() => SmartPhoneModel.Name"></ValidationMessage>
+                    </div>
+                    <div class="form-group">
+                        <label>Manufacturer</label>
+                        <InputText @bind-Value="SmartPhoneModel.Manufacturer" class="form-control"></InputText>
+                        <ValidationMessage For="() => SmartPhoneModel.Manufacturer"></ValidationMessage>
+                    </div>
+                    <div class="form-group">
+                        <label>Available quantity</label>
+                        <InputNumber @bind-Value="SmartPhoneModel.Quantity" class="form-control"></InputNumber>
+                        <ValidationMessage For="() => SmartPhoneModel.Quantity"></ValidationMessage>
+                    </div>
+                    <div class="form-group">
+                        <label>Price</label>
+                        <InputNumber @bind-Value="SmartPhoneModel.Price" class="form-control"></InputNumber>
+                        <ValidationMessage For="() => SmartPhoneModel.Price"></ValidationMessage>
+                    </div>
+                    <div class="form-group" style="height:250px;">
+                        <label>Details</label>
+                        <InputTextArea  rows="7" @bind-Value="SmartPhoneModel.Details" class="form-control"></InputTextArea>
+                    </div>
+
+                    <div class="form-group" style="padding-top:70px;">
+                        <InputFile OnChange="HandleImageUpload" multiple></InputFile>
+                        <div class="row">
+                            @if (IsImageUploadProcessStarted)
+                            {
+                                <div>
+                                    <span><i class="fade fade-spin fa-spinner">Please wait...Images are uploading...</i></span>
+                                </div>
+                            }
+                            @if (SmartPhoneModel.ImageUrls != null && SmartPhoneModel.ImageUrls.Count > 0)
+                            {
+                                int serial = 1;
+                                foreach (var phoneImage in SmartPhoneModel.ImageUrls)
+                                {
+                                    <div class="col-md-2 mt-3">
+                                        <div class="room-image" style="background: url('@phoneImage') 50% 50%;">
+                                            <span class="room-image-title">@serial</span>
+                                        </div>
+
+                                        <button type="button" @onclick="()=>DeletePhoto(phoneImage)" class="btn btn-outline-danger btn-block mt-4">Delete</button>
+                                    </div>
+                                    serial++;
+                                }
+                            }
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary">@Title</button>
+                        <NavLink href="smart-phone" class="btn btn-secondary">Back</NavLink>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+    private SmartPhoneDTO SmartPhoneModel { get; set; } = new SmartPhoneDTO();
+    private string Title { get; set; } = "Create";
+    private SmartPhoneImageDTO PhoneImage { get; set; } = new SmartPhoneImageDTO();
+    private List<string> DeletedImageNames { get; set; } = new List<string>();
+    public BlazoredTextEditor QuillHtml { get; set; } = new BlazoredTextEditor();
+
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationState { get; set; }
+
+    private bool IsImageUploadProcessStarted { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationState;
+
+        if (!authenticationState.User.IsInRole(Common.SD.Role_Admin))
+        {
+            var uri = new Uri(NavigationManager.Uri);
+            NavigationManager.NavigateTo($"identity/account/login?returnUrl={uri.LocalPath}");
+        }
+
+        if (Id != null)
+        {
+            //updating
+            Title = "Update";
+            SmartPhoneModel = await SmartPhoneRepository.GetSmartPhone(Id.Value);
+            if (SmartPhoneModel.SmartPhoneImages != null)
+            {
+                SmartPhoneModel.ImageUrls = SmartPhoneModel.SmartPhoneImages.Select(U => U.PhoneImageUrl).ToList();
+            }
+            SetHTML();
+        }
+        else
+        {
+            //create
+            SmartPhoneModel = new SmartPhoneDTO();
+        }
+    }
+
+    private async Task HandleSmartPhoneUpsert()
+    {
+        try
+        {
+            if (Title == "Create")
+            {
+                var phoneDetailsByName = await SmartPhoneRepository.IsPhoneUnique(SmartPhoneModel.Name, SmartPhoneModel.Id);
+                if (phoneDetailsByName != null)
+                {
+                    //duplicates
+                    await JsRuntime.ToastrError("Phone name already exists.");
+                    return;
+                }
+            }
+
+            if (SmartPhoneModel.Id != 0 && Title == "Update")
+            {
+                //update
+                var updatePhoneResult = await SmartPhoneRepository.UpdateSmartPhone(SmartPhoneModel.Id, SmartPhoneModel);
+                if ((SmartPhoneModel.ImageUrls != null && SmartPhoneModel.ImageUrls.Any())
+                    || (DeletedImageNames != null && DeletedImageNames.Any())
+                    )
+                {
+                    if (DeletedImageNames != null && DeletedImageNames.Any())
+                    {
+                        foreach (var deletedImageName in DeletedImageNames)
+                        {
+                            var imageName = deletedImageName.Replace($"PhoneImages/", "");
+                            var result = FileUpload.DeleteFile(imageName);
+                            await SmartPhoneImagesRepository.DeleteSmartPhoneImageByImageUrl(deletedImageName);
+                        }
+                    }
+
+
+
+
+                    await AddSmartPhoneImage(updatePhoneResult);
+                }
+                await JsRuntime.ToastrSuccess("SmartPhone updated successfully.");
+            }
+            else
+            {
+                //create
+                //SmartPhoneModel.Details = await QuillHtml.GetHTML();
+                var createdResult = await SmartPhoneRepository.CreateSmartPhone(SmartPhoneModel);
+                await AddSmartPhoneImage(createdResult);
+                await JsRuntime.ToastrSuccess("SmartPhone created successfully.");
+            }
+        }
+        catch (Exception ex)
+        {
+            //log exceptions
+            return;
+        }
+
+        NavigationManager.NavigateTo("/smart-phone");
+    }
+
+    public async void SetHTML()
+    {
+        if (string.IsNullOrEmpty(SmartPhoneModel.Details))
+        {
+            await this.QuillHtml.LoadHTMLContent(SmartPhoneModel.Details);
+        }
+    }
+
+    private async Task HandleImageUpload(InputFileChangeEventArgs e)
+    {
+        IsImageUploadProcessStarted = true;
+        try
+        {
+            var images = new List<string>();
+            if (e.GetMultipleFiles().Count > 0)
+            {
+                foreach (var file in e.GetMultipleFiles())
+                {
+                    System.IO.FileInfo fileInfo = new System.IO.FileInfo(file.Name);
+                    if (fileInfo.Extension.ToLower() == ".jpg" ||
+                       fileInfo.Extension.ToLower() == ".png" ||
+                       fileInfo.Extension.ToLower() == ".jpeg")
+                    {
+                        var uploadedImagePath = await FileUpload.UploadFile(file);
+                        images.Add(uploadedImagePath);
+                    }
+                    else
+                    {
+                        await JsRuntime.ToastrError("Please select .jpg/ .jpeg/ .png file only");
+                        return;
+                    }
+                }
+                if (images.Any())
+                {
+                    if (SmartPhoneModel.ImageUrls != null && SmartPhoneModel.ImageUrls.Any())
+                    {
+                        SmartPhoneModel.ImageUrls.AddRange(images);
+                    }
+                    else
+                    {
+                        SmartPhoneModel.ImageUrls = new List<string>();
+                        SmartPhoneModel.ImageUrls.AddRange(images);
+                    }
+                }
+                else
+                {
+                    await JsRuntime.ToastrError("Image upload failed");
+                    return;
+                }
+            }
+            IsImageUploadProcessStarted = false;
+        }
+        catch (Exception ex)
+        {
+            await JsRuntime.ToastrError(ex.Message);
+            throw ex;
+        }
+    }
+
+    private async Task AddSmartPhoneImage(SmartPhoneDTO phoneDetails)
+    {
+        foreach (var imageUrl in SmartPhoneModel.ImageUrls)
+        {
+            if (SmartPhoneModel.SmartPhoneImages == null || SmartPhoneModel.SmartPhoneImages.Where(x => x.PhoneImageUrl == imageUrl).Count() == 0)
+            {
+                PhoneImage = new SmartPhoneImageDTO()
+                {
+                    PhoneId = phoneDetails.Id,
+                    PhoneImageUrl = imageUrl
+                };
+                await SmartPhoneImagesRepository.CreateSmartPhoneImage(PhoneImage);
+            }
+        }
+    }
+
+    internal async Task DeletePhoto(string imageUrl)
+    {
+        try
+        {
+            var imageIndex = SmartPhoneModel.ImageUrls.FindIndex(x => x == imageUrl);
+            var imageName = imageUrl.Replace($"PhoneImages/", "");
+            if (SmartPhoneModel.Id == 0 && Title == "Create")
+            {
+                var result = FileUpload.DeleteFile(imageName);
+            }
+            else
+            {
+                //update
+                DeletedImageNames ??= new List<string>();
+                DeletedImageNames.Add(imageUrl);
+            }
+            SmartPhoneModel.ImageUrls.RemoveAt(imageIndex);
+        }
+        catch (Exception ex)
+        {
+            await JsRuntime.ToastrError(ex.Message);
+        }
+
+    }
+
+}

@@ -1,0 +1,158 @@
+﻿@page "/user/create"
+@page "/user/edit/{UserId}"
+@using Models
+@using Business.Repository.IRepository;
+@using TechMania_Server.Service.IService;
+@using Microsoft.AspNetCore.Identity;
+@inject UserManager<IdentityUser> UserManager
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+@inject IFileUpload FileUpload
+
+<div class="row mt-2 mb-5">
+    <h3 class="card-title text-info mb-3 ml-3">@Title User</h3>
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <EditForm Model="Model" OnValidSubmit="HandleUserUpsert">
+                    <DataAnnotationsValidator />
+                    <div class="form-group">
+                        <label>Username</label>
+                        <InputText @bind-Value="Model.UserName" class="form-control"></InputText>
+
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <InputText @bind-Value="Model.Email" class="form-control"></InputText>
+
+                    </div>
+                    <div class="form-group">
+                        <label>Phone number</label>
+                        <InputText @bind-Value="Model.PhoneNumber" class="form-control"></InputText>
+                    </div>
+                    <div class="form-group">
+                        <label class="text-warning">Roles</label>
+                        <select class="form-control" value="@SelectedRole" @onchange="HandleRoleChange">
+                            @foreach (var item in Roles)
+                            {
+                                <option value="@item">@item</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary">@Title</button>
+                        <NavLink href="users" class="btn btn-secondary">Back</NavLink>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string UserId { get; set; }
+    private IdentityUser Model { get; set; } = new IdentityUser();
+    private string Title { get; set; } = "Create";
+    public List<string> Roles { get; set; } = new List<string>();
+    public string SelectedRole { get; set; }
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Roles.Add(Common.SD.Role_Admin);
+        Roles.Add(Common.SD.Role_Customer);
+        Roles.Add(Common.SD.Role_Employee);
+
+        var authenticationState = await AuthenticationState;
+
+        if (!authenticationState.User.IsInRole(Common.SD.Role_Admin))
+        {
+            var uri = new Uri(NavigationManager.Uri);
+            NavigationManager.NavigateTo($"identity/account/login?returnUrl={uri.LocalPath}");
+        }
+
+        if (!string.IsNullOrEmpty(UserId))
+        {
+            //updating
+            Title = "Update";
+            Model = await UserManager.FindByIdAsync(UserId);
+
+            if (await UserManager.IsInRoleAsync(Model, Common.SD.Role_Admin))
+            {
+                SelectedRole = Common.SD.Role_Admin;
+            }
+            else if (await UserManager.IsInRoleAsync(Model, Common.SD.Role_Customer))
+            {
+                SelectedRole = Common.SD.Role_Customer;
+            }
+            else if (await UserManager.IsInRoleAsync(Model, Common.SD.Role_Employee))
+            {
+                SelectedRole = Common.SD.Role_Employee;
+            }
+            else
+            {
+                SelectedRole = Common.SD.Role_Employee;
+            }
+        }
+        else
+        {
+            //create
+            Model = new IdentityUser();
+        }
+    }
+
+    private async Task HandleUserUpsert()
+    {
+        try
+        {
+            if (Title == "Create")
+            {
+                var modelExisting = await UserManager.FindByIdAsync(UserId);
+                if (modelExisting != null)
+                {
+                    //duplicates
+                    await JsRuntime.ToastrError("User already exists.");
+                    return;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(Model.Id) && Title == "Update")
+            {
+                //update
+                var updatePhoneResult = await UserManager.UpdateAsync(Model);
+
+                //ovdje sada dovlacimo postojece role da bi onda dodali ovu odabranu
+                var currentRoles = await UserManager.GetRolesAsync(Model);
+                var removeUserFromRole = await UserManager.RemoveFromRolesAsync(Model, currentRoles);
+                var updateUserRole = await UserManager.AddToRoleAsync(Model, SelectedRole);
+
+                await JsRuntime.ToastrSuccess("User updated successfully.");
+            }
+            else
+            {
+                //create
+                //SmartPhoneModel.Details = await QuillHtml.GetHTML();
+                var createdResult = await UserManager.CreateAsync(Model);
+                //ovdje sada dovlacimo postojece role da bi onda dodali ovu odabranu
+                var currentRoles = await UserManager.GetRolesAsync(Model);
+                var removeUserFromRole = await UserManager.RemoveFromRolesAsync(Model, currentRoles);
+                var updateUserRole = await UserManager.AddToRoleAsync(Model, SelectedRole);
+
+                await JsRuntime.ToastrSuccess("User created successfully.");
+            }
+        }
+        catch (Exception ex)
+        {
+            //log exceptions
+            return;
+        }
+
+        NavigationManager.NavigateTo("/users");
+    }
+    private async Task HandleRoleChange(ChangeEventArgs e)
+    {
+        SelectedRole = e.Value.ToString();
+    }
+}

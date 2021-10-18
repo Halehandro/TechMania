@@ -1,0 +1,85 @@
+﻿@page "/allsmartphones"
+
+@inject Microsoft.Extensions.Configuration.IConfiguration config
+@inject ISmartPhoneService smartphoneService
+
+<section id="hero">
+
+    <div class="container">
+        <div class="row justify-content-between">
+            <div class="col-lg-7 pt-5 pt-lg-0 order-2 order-lg-1 d-flex align-items-center">
+                <div data-aos="zoom-out">
+                    <h1>SmartPhones</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <svg class="hero-waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28 " preserveAspectRatio="none">
+        <defs>
+            <path id="wave-path" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+        </defs>
+        <g class="wave1">
+            <use xlink:href="#wave-path" x="50" y="3" fill="rgba(255,255,255, .1)" />
+        </g>
+        <g class="wave2">
+            <use xlink:href="#wave-path" x="50" y="0" fill="rgba(255,255,255, .2)" />
+        </g>
+        <g class="wave3">
+            <use xlink:href="#wave-path" x="50" y="9" fill="#fff" />
+        </g>
+    </svg>
+
+</section>
+
+<section id="counts" class="counts">
+    <div class="container">
+        <div class="row">
+            @foreach (var phone in Phones)
+            {
+                <div class="col-md-3" style="margin-top:30px">
+                    <div class="card" style="width: 18rem;">
+                        @if (phone.SmartPhoneImages.Count > 0)
+                        {
+                            var domain = config["ServerUrl"];
+                            var imageUrl = domain + phone.SmartPhoneImages.FirstOrDefault().PhoneImageUrl;
+                            <img src="@imageUrl" height="300" width="280" class="card-img-top" alt="alt">
+                        }
+                        <div class="card-body">
+                            <h5 class="card-title">@phone.Name</h5>
+                            @if (phone.Details.Length > 150)
+                            {
+                                <p class="card-text">@phone.Details.Substring(0, 150)...</p>
+                            }
+                            else
+                            {
+                                <p class="card-text">@phone.Details</p>
+                            }
+                            <a href="/smartphones/phone-details/@phone.Id" class="btn btn-success">Order</a>
+                        </div>
+                    </div>
+                </div>
+            }
+
+        </div>
+    </div>
+
+</section>
+
+@code {
+    private List<SmartPhoneDTO> Phones { get; set; } = new List<SmartPhoneDTO>();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        await LoadPhones();
+
+    }
+
+
+    private async Task LoadPhones()
+    {
+        Phones = await smartphoneService.GetSmartPhones(null);
+    }
+
+}

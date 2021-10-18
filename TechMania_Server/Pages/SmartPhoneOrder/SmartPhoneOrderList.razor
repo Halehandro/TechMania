@@ -1,0 +1,64 @@
+﻿@page "/smartphone-order"
+@using Business.Repository.IRepository
+@using Models
+@using Radzen
+@inject ISmartPhoneOrderDetailRepository smartPhoneDetailRepository
+@inject IJSRuntime jsRuntime
+@inject NavigationManager navigationManager
+@attribute [Authorize(Roles = Common.SD.Role_Admin)]
+
+@if (!IsLoading)
+{
+    <h4 class="card-title text-info">SmartPhone Orders</h4>
+    <RadzenDataGrid AllowFiltering="true"
+                    AllowColumnResize="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    FilterMode="FilterMode.Advanced"
+                    PageSize="15" AllowPaging="true" AllowSorting="true"
+                    Data="@SmartPhoneOrders" TItem="SmartPhoneOrderDetailDTO" ColumnWidth="300px"
+                    LogicalFilterOperator="LogicalFilterOperator.Or">
+        <Columns>
+            <RadzenDataGridColumn TItem="SmartPhoneOrderDetailDTO" Property="Name" Filterable="false" Title="Customer name" Frozen="true" Width="100px" TextAlign="TextAlign.Center" />
+            <RadzenDataGridColumn TItem="SmartPhoneOrderDetailDTO" Property="Phone" Filterable="false" Title="Phone number" Frozen="true" Width="100px" TextAlign="TextAlign.Center" />
+            <RadzenDataGridColumn TItem="SmartPhoneOrderDetailDTO" Property="Email" Filterable="false" Title="Customer email" Frozen="true" Width="100px" TextAlign="TextAlign.Center" />
+            <RadzenDataGridColumn TItem="SmartPhoneOrderDetailDTO" Property="SmartPhoneName" Filterable="false" Title="Model name" Frozen="true" Width="100px" TextAlign="TextAlign.Center" />
+            <RadzenDataGridColumn TItem="SmartPhoneOrderDetailDTO" Property="Status" Filterable="false" Title="Order status" Frozen="true" Width="100px" TextAlign="TextAlign.Center" />
+            <RadzenDataGridColumn TItem="SmartPhoneOrderDetailDTO" Property="ActualCheckInDate" Filterable="false" Title="Payment date" Frozen="true" Width="100px" TextAlign="TextAlign.Center">
+
+                <Template Context="data">
+                    @String.Format("{0:d}", data.ActualCheckInDate)
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="SmartPhoneOrderDetailDTO" Property="ActualCheckOutDate" Filterable="false" Title="Shipment date" Frozen="true" Width="100px" TextAlign="TextAlign.Center">
+
+                <Template Context="data">
+                    @String.Format("{0:d}", data.ActualCheckOutDate)
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="SmartPhoneOrderDetailDTO" Property="Id" Title="" Width="30px">
+                <Template Context="data">
+                    <NavLink href="@($"smartphone-order/details/{data.Id}")"><i class="fas fa-edit fa-lg"></i></NavLink>
+                </Template>
+            </RadzenDataGridColumn>
+
+        </Columns>
+    </RadzenDataGrid>
+
+}
+else
+{
+
+}
+
+@code {
+    private List<SmartPhoneOrderDetailDTO> SmartPhoneOrders { get; set; } = new List<SmartPhoneOrderDetailDTO>();
+    private bool IsLoading { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+        SmartPhoneOrders = await smartPhoneDetailRepository.GetAllSmartphoneOrderDetails();
+        SmartPhoneOrders = SmartPhoneOrders.OrderByDescending(x => x.Id).ToList();
+        IsLoading = false;
+    }
+
+}

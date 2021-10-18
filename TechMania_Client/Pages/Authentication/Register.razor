@@ -1,0 +1,142 @@
+﻿@page "/registration"
+
+@inject IAuthenticationService authenticationService
+@inject NavigationManager navigationManager
+
+<section id="hero">
+
+    <div class="container">
+        <div class="row justify-content-between">
+            <div class="col-lg-7 pt-5 pt-lg-0 order-2 order-lg-1 d-flex align-items-center">
+                <div data-aos="zoom-out">
+                    <h1>Registration</h1>
+                </div>
+            </div>
+            <div class="col-lg-4 order-1 order-lg-2 hero-img" data-aos="zoom-out" data-aos-delay="300">
+                <img src="assets/img/hero-img.png" class="img-fluid animated" alt="">
+            </div>
+        </div>
+    </div>
+
+    <svg class="hero-waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28 " preserveAspectRatio="none">
+        <defs>
+            <path id="wave-path" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+        </defs>
+        <g class="wave1">
+            <use xlink:href="#wave-path" x="50" y="3" fill="rgba(255,255,255, .1)" />
+        </g>
+        <g class="wave2">
+            <use xlink:href="#wave-path" x="50" y="0" fill="rgba(255,255,255, .2)" />
+        </g>
+        <g class="wave3">
+            <use xlink:href="#wave-path" x="50" y="9" fill="#fff" />
+        </g>
+    </svg>
+
+</section>
+
+<EditForm Model="UserForRegistration" OnValidSubmit="RegisterUser" class="pt-4">
+    <DataAnnotationsValidator/>
+        <div class="py-4">
+            <div class=" row form-group ">
+                <div class="col-6 offset-3 ">
+                    <div class="card border">
+                        <div class="card-body px-lg-5 pt-4">
+                            <h3 class="col-12 text-success text-center py-2">
+                                <strong>Registration</strong>
+                            </h3>
+
+                            @if (ShowRegistrationErrors)
+                            {
+                                <div>
+                                    @foreach (var error in Errors)
+                                    {
+                                        <p class="text-danger text-center">@error</p>
+                                    }
+                                </div>
+
+                            }
+
+                            <hr style="background-color:aliceblue" />
+                            <div class="py-2">
+                                <InputText @bind-Value="UserForRegistration.Name" class="form-control" placeholder="Name..." />
+                                <ValidationMessage For="(()=>UserForRegistration.Name)" />
+
+                            </div>
+                            <div class="py-2">
+                                <InputText @bind-Value="UserForRegistration.Email" type="email" class="form-control" placeholder="Email..." />
+                                <ValidationMessage For="(()=>UserForRegistration.Email)" />
+
+                            </div>
+                            <div class="py-2 input-group">
+                                <InputText @bind-Value="UserForRegistration.Address" class="form-control" placeholder="Address..." />
+
+                            </div>
+                            <div class="py-2 input-group">
+                                <InputText @bind-Value="UserForRegistration.City" class="form-control" placeholder="City..." />
+
+                            </div>
+                            <div class="py-2 input-group">
+                                <InputText @bind-Value="UserForRegistration.Country" class="form-control" placeholder="Country..." />
+
+                            </div>
+                            <div class="py-2 input-group">
+                                <InputText @bind-Value="UserForRegistration.PhoneNumber" class="form-control" placeholder="Phone number..." />
+                                <ValidationMessage For="(()=>UserForRegistration.PhoneNumber)" />
+
+                            </div>
+                            <div class="form-row py-2">
+                                <div class="col">
+                                    <InputText @bind-Value="UserForRegistration.Password" type="password" id="password" placeholder="Password..." class="form-control" />
+                                    <ValidationMessage For="(()=>UserForRegistration.Password)" />
+                                </div>
+                                <br>
+                                <div class="col">
+                                    <InputText @bind-Value="UserForRegistration.ConfirmPassword" type="password" id="confirm" class="form-control" placeholder="Confirm Password..." />
+                                    <ValidationMessage For="(()=>UserForRegistration.ConfirmPassword)" />
+                                </div>
+
+                            </div>
+                            <hr style="background-color:aliceblue" />
+                            <div class="py-2  text-center">
+                                @if (IsProcessing)
+                                {
+                                    <button type="submit" class="btn btn-success btn-block disabled"><i class="fas fa-sign-in-alt"></i> Please Wait...</button>
+                                }
+                                else
+                                {
+                                    <button type="submit" class="btn btn-success btn-block"><i class="fas fa-sign-in-alt"></i> Register</button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+</EditForm>
+
+@code {
+
+    private UserRequestDTO UserForRegistration = new UserRequestDTO();
+    public bool IsProcessing { get; set; } = false;
+    public bool ShowRegistrationErrors { get; set; }
+    public IEnumerable<string> Errors { get; set; }
+
+    public async Task RegisterUser()
+    {
+        ShowRegistrationErrors = false;
+        IsProcessing = true;
+        var result = await authenticationService.RegisterUser(UserForRegistration);
+        if (result.IsRegisterationSuccessful)
+        {
+            IsProcessing = false;
+            navigationManager.NavigateTo("/login");
+        }
+        else
+        {
+            IsProcessing = false;
+            Errors = result.Errors;
+            ShowRegistrationErrors = true;
+        }
+    }
+}

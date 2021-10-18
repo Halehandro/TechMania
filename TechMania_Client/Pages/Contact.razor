@@ -1,0 +1,124 @@
+﻿@page "/contact"
+@using Models
+@inject IJSRuntime jsRuntime
+@inject NavigationManager NavigationManager
+@inject IContactFormService contactService
+<section id="hero">
+
+    <div class="container">
+        <div class="row justify-content-between">
+            <div class="col-lg-7 pt-5 pt-lg-0 order-2 order-lg-1 d-flex align-items-center">
+                <div data-aos="zoom-out">
+                    <h1>Contact us</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <svg class="hero-waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28 " preserveAspectRatio="none">
+        <defs>
+            <path id="wave-path" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+        </defs>
+        <g class="wave1">
+            <use xlink:href="#wave-path" x="50" y="3" fill="rgba(255,255,255, .1)" />
+        </g>
+        <g class="wave2">
+            <use xlink:href="#wave-path" x="50" y="0" fill="rgba(255,255,255, .2)" />
+        </g>
+        <g class="wave3">
+            <use xlink:href="#wave-path" x="50" y="9" fill="#fff" />
+        </g>
+    </svg>
+
+</section>
+    <!-- ======= Contact Section ======= -->
+<section id="contact" class="contact">
+    <div class="container">
+
+        <div class="section-title" data-aos="fade-up">
+            <p>Feel free to send us a message</p>
+        </div>
+
+        <div class="row">
+
+            <div class="col-lg-4" data-aos="fade-right" data-aos-delay="100">
+                <div class="info">
+                    <div class="address">
+                        <i class="bi bi-geo-alt"></i>
+                        <h4>Location:</h4>
+                        <p>Ilica 11, Zagreb, Croatia</p>
+                    </div>
+
+                    <div class="email">
+                        <i class="bi bi-envelope"></i>
+                        <h4>Email:</h4>
+                        <p>dohaluse@vsite.hr</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-lg-8 mt-5 mt-lg-0" data-aos="fade-left" data-aos-delay="200">
+
+                <EditForm Model="contactModel" id="contact-form" name="contact-form" OnValidSubmit="SendContactMail">
+                    <DataAnnotationsValidator />
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <InputText type="text" id="name" @bind-Value="contactModel.SenderName" name="name" placeholder="Your Name" class="form-control" />
+                            <ValidationMessage For="() => contactModel.SenderName"></ValidationMessage>
+                        </div>
+                        <div class="col-md-6 form-group mt-3 mt-md-0">
+                            <InputText type="email" id="email" @bind-Value="contactModel.SenderEmail" name="email" placeholder="Your Email" class="form-control" />
+                            <ValidationMessage For="() => contactModel.SenderEmail"></ValidationMessage>
+                        </div>
+                    </div>
+                    <div class="form-group mt-3">
+                        <InputText type="text" id="subject" @bind-Value="contactModel.Subject" name="subject" placeholder="Subject" class="form-control" />
+                        <ValidationMessage For="() => contactModel.Subject"></ValidationMessage>
+                    </div>
+                    <div class="form-group mt-3">
+                        <InputTextArea type="text" id="message" @bind-Value="contactModel.ContactMessage" name="message" placeholder="Message" rows="5" class="form-control"></InputTextArea>
+                        <ValidationMessage For="() => contactModel.ContactMessage"></ValidationMessage>
+
+                    </div>
+                    @if (MessageSent)
+                    {
+                        <div class="my-3">
+                            <div class="sent-message">Your message has been sent. Thank you!</div>
+                        </div>
+                    }
+
+                <div class="text-center">
+                    <button type="submit" class="btn btn-success btn-block mt-5">Send Message</button>
+                </div>
+                </EditForm>
+
+            </div>
+
+        </div>
+
+    </div>
+</section><!-- End Contact Section -->
+<!--Section: Contact v.2-->
+
+
+@code {
+    private ContactFormModel contactModel { get; set; } = new ContactFormModel();
+    public bool MessageSent { get; set; } = false;
+
+    private async Task SendContactMail()
+    {
+        var result = await contactService.SendContactMessage(contactModel);
+        if (result.MessageSent)
+        {
+            await jsRuntime.ToastrSuccess("Message successfully sent!");
+            MessageSent = true;
+        }
+        else
+        {
+            await jsRuntime.ToastrError("Message sending failed!");
+        }
+    }
+
+
+}

@@ -1,0 +1,92 @@
+﻿@page "/users"
+@using Models
+@using Business.Repository.IRepository;
+@using Radzen
+@inject ISmartPhoneRepository SmartPhoneRepository
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+@inject TechMania_Server.Service.IService.IFileUpload FileUpload
+@attribute [Authorize(Roles = Common.SD.Role_Admin)]
+@using Microsoft.AspNetCore.Identity;
+@inject UserManager<IdentityUser> UserManager
+
+@if (!IsProcessing)
+{
+    <h4 class="card-title text-info">Users</h4>
+    <RadzenDataGrid AllowFiltering="true"
+                    AllowColumnResize="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    FilterMode="FilterMode.Advanced"
+                    PageSize="10" AllowPaging="true" AllowSorting="true"
+                    Data="@Users" TItem="IdentityUser" ColumnWidth="300px"
+                    LogicalFilterOperator="LogicalFilterOperator.Or">
+        <Columns>
+            <RadzenDataGridColumn TItem="IdentityUser" Property="Email" Filterable="false" Title="Email" Frozen="true" Width="150px" TextAlign="TextAlign.Center" />
+            <RadzenDataGridColumn TItem="IdentityUser" Property="PhoneNumber" Filterable="false" Title="Phone number" Frozen="true" Width="150px" TextAlign="TextAlign.Center"/>
+            <RadzenDataGridColumn TItem="IdentityUser" Property="Id" Title="" Width="30px">
+                <Template Context="data">
+                    <NavLink href="@($"user/edit/{data.Id}")"><i class="fas fa-edit fa-lg"></i></NavLink>
+                    <NavLink @onclick="()=>HandleDelete(data.Id)"><i class="fas fa-trash-alt"></i></NavLink>
+
+                </Template>
+            </RadzenDataGridColumn>
+
+        </Columns>
+    </RadzenDataGrid>
+
+}
+else
+{
+
+}
+
+<DeleteConfirmation IsParentComponentProcessing="IsProcessing" ConfirmationChanged="ConfirmDelete_Click"></DeleteConfirmation>
+
+@code {
+
+    private List<IdentityUser> Users { get; set; } = new List<IdentityUser>();
+    private string DeleteUserId { get; set; } = null;
+    private bool IsDeleteProcessComplete { get; set; } = false;
+    private bool IsProcessing { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Users = UserManager.Users.ToList();
+        Users = Users.OrderByDescending(x => x.Id).ToList();
+    }
+
+    private async Task HandleDelete(string UserId)
+    {
+        DeleteUserId = UserId;
+        IsDeleteProcessComplete = false;
+        await JsRuntime.InvokeVoidAsync("ShowDeleteConfirmationModal");
+    }
+
+    public async Task ConfirmDelete_Click(bool isConfirmed)
+    {
+        try
+        {
+            IsProcessing = true;
+            if (isConfirmed && DeleteUserId != null)
+            {
+                var userFromDb = await UserManager.FindByIdAsync(DeleteUserId);
+                Users.Remove(userFromDb);
+                var x = await UserManager.DeleteAsync(userFromDb);
+                if (x.Succeeded)
+                {
+                    await JsRuntime.ToastrSuccess("User Deleted successfully");
+                }
+
+            }
+            await JsRuntime.InvokeVoidAsync("HideDeleteConfirmationModal");
+            IsProcessing = false;
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JsRuntime.ToastrError("User delete failed. " + ex.Message);
+            throw ex;
+        }
+
+    }
+}

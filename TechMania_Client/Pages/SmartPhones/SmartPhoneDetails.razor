@@ -1,0 +1,317 @@
+﻿@page "/smartphones/phone-details/{Id:int}"
+@inject ILocalStorageService localStorage
+@inject IJSRuntime jsRuntime
+@inject IStripePaymentService stripePaymentService
+@inject ISmartPhoneService smartphoneService
+@inject ISmartPhoneOrderDetailService smartphoneOrderDetailsService
+@inject Microsoft.Extensions.Configuration.IConfiguration config
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = SD.Role_Customer)]
+<section id="hero">
+
+    <div class="container">
+        <div class="row justify-content-between">
+            <div class="col-lg-7 pt-5 pt-lg-0 order-2 order-lg-1 d-flex align-items-center">
+                <div data-aos="zoom-out">
+                    <h1>@SmartphoneOrder.OrderDetails.SmartPhoneDTO.Name details</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <svg class="hero-waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28 " preserveAspectRatio="none">
+        <defs>
+            <path id="wave-path" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+        </defs>
+        <g class="wave1">
+            <use xlink:href="#wave-path" x="50" y="3" fill="rgba(255,255,255, .1)" />
+        </g>
+        <g class="wave2">
+            <use xlink:href="#wave-path" x="50" y="0" fill="rgba(255,255,255, .2)" />
+        </g>
+        <g class="wave3">
+            <use xlink:href="#wave-path" x="50" y="9" fill="#fff" />
+        </g>
+    </svg>
+
+</section>
+<div class="mt-4 mx-4 px-0 px-md-5 mx-md-5">
+
+    <div class="row p-2 my-3 " style="border-radius:20px; ">
+        <div class="col-12 col-lg-7 p-4" style="border: 1px solid #fff">
+            <div class="row px-2 text-success border-bottom">
+                <div class="col-8 py-1"><p style="font-size:x-large;margin:0px;">Selected Room</p></div>
+            </div>
+
+            <div class="row">
+                <div class="col-6">
+                    <div id="" class="carousel slide mb-4 m-md-3 m-0 pt-3 pt-md-0" data-ride="carousel">
+                        <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
+                            <ol class="carousel-indicators">
+                                @{ int imageIndex = 0;
+                                    int innerImageIndex = 0; }
+                                @foreach (var image in SmartphoneOrder.OrderDetails.SmartPhoneDTO.SmartPhoneImages)
+                                {
+                                    if (imageIndex == 0)
+                                    {
+                                        <li data-target="#carouselExampleIndicators" data-slide-to="@imageIndex" class="active"></li>
+                                    }
+                                    else
+                                    {
+                                        <li data-target="#carouselExampleIndicators" data-slide-to="@imageIndex"></li>
+                                    }
+                                    imageIndex++;
+                                }
+                            </ol>
+                            <div class="carousel-inner">
+                                @foreach (var image in SmartphoneOrder.OrderDetails.SmartPhoneDTO.SmartPhoneImages)
+                                {
+                                    var domain = config["ServerUrl"];
+                                    var imageUrl = domain + image.PhoneImageUrl;
+
+                                    if (innerImageIndex == 0)
+                                    {
+                                        <div class="carousel-item active">
+                                            <img class="d-block w-100" style="border-radius:20px;" src="@imageUrl" alt="First slide">
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="carousel-item">
+                                            <img class="d-block w-100" style="border-radius:20px;" src="@imageUrl" alt="First slide">
+                                        </div>
+                                    }
+
+                                    innerImageIndex++;
+                                }
+                            </div>
+                            <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="sr-only">Previous</span>
+                            </a>
+                            <a class="carousel-control-next" href="#carouselExampleIndicators" role="button" data-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="sr-only">Next</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <span class="float-right pt-4">
+                        <span class="float-right">Manufacturer : @SmartphoneOrder.OrderDetails.SmartPhoneDTO.Manufacturer </span><br />
+                        <span class="float-right pt-1">Price : @SmartphoneOrder.OrderDetails.SmartPhoneDTO.Price</span><br />
+                        <h4 class="text-warning font-weight-bold pt-5">
+                            USD
+                            <span style="border-bottom:1px solid #ff6a00">
+                                @SmartphoneOrder.OrderDetails.SmartPhoneDTO.TotalPrice.ToString("#,#.00#;(#,#.00#)")
+                            </span>
+                        </h4>
+                        <span class="float-right">Cost for @SmartphoneOrder.OrderDetails.OrderQuantity phones</span>
+                    </span>
+                </div>
+            </div>
+            <div class="row p-2">
+                <div class="col-12">
+                    <p class="card-title text-warning" style="font-size:xx-large">@SmartphoneOrder.OrderDetails.SmartPhoneDTO.Name</p>
+                    <p class="card-text" style="font-size:large">
+                        @((MarkupString)@SmartphoneOrder.OrderDetails.SmartPhoneDTO.Details)
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-5 p-4 2 mt-4 mt-md-0" style="border: 1px solid #fff;">
+            <EditForm Model="SmartphoneOrder" class="container" OnValidSubmit="HandleCheckout">
+                <DataAnnotationsValidator/>
+                <div class="row px-2 text-success border-bottom"><div class="col-7 py-1"><p style="font-size:x-large;margin:0px;">Enter Details</p></div></div>
+
+                <div class="form-group pt-2">
+                    <label class="text-warning">Name</label>
+                    <InputText @bind-Value="SmartphoneOrder.OrderDetails.Name" type="text" class="form-control" />
+                </div>
+                <div class="form-group pt-2">
+                    <label class="text-warning">Phone</label>
+                    <InputText @bind-Value="SmartphoneOrder.OrderDetails.Phone" type="text" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label class="text-warning">Email</label>
+                    <InputText @bind-Value="SmartphoneOrder.OrderDetails.Email" type="text" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label class="text-warning">Address</label>
+                    <InputText @bind-Value="SmartphoneOrder.OrderDetails.Address" type="text" class="form-control" />
+                    <ValidationMessage For="(()=>SmartphoneOrder.OrderDetails.Address)" />
+                </div>
+                <div class="form-group">
+                    <label class="text-warning">City</label>
+                    <InputText @bind-Value="SmartphoneOrder.OrderDetails.City" type="text" class="form-control" />
+                    <ValidationMessage For="(()=>SmartphoneOrder.OrderDetails.City)" />
+                </div>
+                <div class="form-group">
+                    <label class="text-warning">Country</label>
+                    <InputText @bind-Value="SmartphoneOrder.OrderDetails.Country" type="text" class="form-control" />
+                    <ValidationMessage For="(()=>SmartphoneOrder.OrderDetails.Country)" />
+                </div>
+                <div class="form-group">
+                    <label class="text-warning">No. of phones</label>
+                    <select class="form-control" value="@NoOfPhones" @onchange="HandleNoOfPhonesChange">
+                        @{ 
+                            int maxOrderQuantity = 10;
+                            if (SmartphoneOrder.OrderDetails.SmartPhoneDTO.Quantity < 10)
+                            {
+                                maxOrderQuantity = SmartphoneOrder.OrderDetails.SmartPhoneDTO.Quantity;
+                            }
+                        }
+                        @for (var i = 1; i <= maxOrderQuantity; i++)
+                        {
+                            if (i == NoOfPhones)
+                            {
+                                <option value="@i" selected="selected">@i</option>
+                            }
+                            else
+                            {
+                                <option value="@i">@i</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+
+                    @if (SmartphoneOrder.OrderDetails.SmartPhoneDTO.Quantity < 1)
+                    {
+                        <input class="btn btn-secondary form-control" value="Sold Out" /> }
+                    else
+                    {
+                        <button type="submit" class="btn btn-success form-control">Checkout Now</button>}
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+    private SmartPhoneOrderVM SmartphoneOrder = new SmartPhoneOrderVM();
+    private int NoOfPhones { get; set; } = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            SmartphoneOrder.OrderDetails = new SmartPhoneOrderDetailDTO();
+            if (Id != null)
+            {
+                if (await localStorage.GetItemAsync<HomeVM>
+                        (SD.Local_InitialBooking) != null)
+                {
+                    var smartphoneInitialInfo = await localStorage.GetItemAsync<HomeVM>
+                        (SD.Local_InitialBooking);
+
+                    SmartphoneOrder.OrderDetails.SmartPhoneDTO = await smartphoneService.GetSmartPhoneDetails(Id.Value);
+                    NoOfPhones = smartphoneInitialInfo.NoOfPhones;
+                    SmartphoneOrder.OrderDetails.SmartPhoneDTO.TotalPrice = Convert.ToInt32(smartphoneInitialInfo.NoOfPhones * SmartphoneOrder.OrderDetails.SmartPhoneDTO.Price);
+                }
+                else
+                {
+                    SmartphoneOrder.OrderDetails.SmartPhoneDTO = await smartphoneService.GetSmartPhoneDetails(Id.Value);
+                    NoOfPhones = 1;
+                }
+            }
+
+            if (await localStorage.GetItemAsync<UserDTO>(SD.Local_UserDetails) != null)
+            {
+                var userInfo = await localStorage.GetItemAsync<UserDTO>(SD.Local_UserDetails);
+                SmartphoneOrder.OrderDetails.UserId = userInfo.Id;
+                SmartphoneOrder.OrderDetails.Name = userInfo.Name;
+                SmartphoneOrder.OrderDetails.Email = userInfo.Email;
+                SmartphoneOrder.OrderDetails.Phone = userInfo.PhoneNo;
+            }
+        }
+        catch (Exception e)
+        {
+            await jsRuntime.ToastrError(e.Message);
+        }
+    }
+    private async Task HandleCheckout()
+    {
+        if (!await HandleValidation())
+        {
+            return;
+        }
+
+        try
+        {
+            var paymentDTO = new StripePaymentDTO()
+            {
+                Amount = Convert.ToInt32(SmartphoneOrder.OrderDetails.SmartPhoneDTO.TotalPrice * 100),
+                ProductName = SmartphoneOrder.OrderDetails.SmartPhoneDTO.Name,
+                ReturnUrl = "/smartphones/phone-details/" + Id
+            };
+
+            var result = await stripePaymentService.CheckOut(paymentDTO);
+
+            SmartphoneOrder.OrderDetails.StripeSessionId = result.Data.ToString();
+            SmartphoneOrder.OrderDetails.SmartPhoneId = SmartphoneOrder.OrderDetails.SmartPhoneDTO.Id;
+            SmartphoneOrder.OrderDetails.TotalCost = SmartphoneOrder.OrderDetails.OrderQuantity * SmartphoneOrder.OrderDetails.SmartPhoneDTO.Price;
+            SmartphoneOrder.OrderDetails.ActualCheckInDate = DateTime.Now;
+
+            var roomOrderDetailsSaved = await smartphoneOrderDetailsService.SaveSmartPhoneOrderDetails(SmartphoneOrder.OrderDetails);
+
+            await localStorage.SetItemAsync(SD.Local_PhoneOrderDetails, roomOrderDetailsSaved);
+
+            await jsRuntime.InvokeVoidAsync("redirectToCheckout", result.Data.ToString());
+        }
+        catch (Exception e)
+        {
+            await jsRuntime.ToastrError(e.Message);
+        }
+
+    }
+    private async Task<bool>
+        HandleValidation()
+    {
+        if (string.IsNullOrEmpty(SmartphoneOrder.OrderDetails.Name))
+        {
+            await jsRuntime.ToastrError("Name cannot be empty");
+            return false;
+        }
+        if (string.IsNullOrEmpty(SmartphoneOrder.OrderDetails.Phone))
+        {
+            await jsRuntime.ToastrError("Phone cannot be empty");
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(SmartphoneOrder.OrderDetails.Email))
+        {
+            await jsRuntime.ToastrError("Email cannot be empty");
+            return false;
+        }
+        if (string.IsNullOrEmpty(SmartphoneOrder.OrderDetails.Address))
+        {
+            await jsRuntime.ToastrError("Address cannot be empty");
+            return false;
+        }
+        if (string.IsNullOrEmpty(SmartphoneOrder.OrderDetails.City))
+        {
+            await jsRuntime.ToastrError("City cannot be empty");
+            return false;
+        }
+        if (string.IsNullOrEmpty(SmartphoneOrder.OrderDetails.Country))
+        {
+            await jsRuntime.ToastrError("Country cannot be empty");
+            return false;
+        }
+        return true;
+
+    }
+    private async Task HandleNoOfPhonesChange(ChangeEventArgs e)
+    {
+        NoOfPhones = Convert.ToInt32(e.Value.ToString());
+        SmartphoneOrder.OrderDetails.SmartPhoneDTO = await smartphoneService.GetSmartPhoneDetails(Id.Value);
+        SmartphoneOrder.OrderDetails.OrderQuantity = NoOfPhones;
+        SmartphoneOrder.OrderDetails.SmartPhoneDTO.TotalPrice = Convert.ToInt32(NoOfPhones * SmartphoneOrder.OrderDetails.SmartPhoneDTO.Price);
+    }
+}

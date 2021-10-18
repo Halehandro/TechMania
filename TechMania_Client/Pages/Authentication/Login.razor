@@ -1,0 +1,124 @@
+﻿@page "/login"
+
+@using System.Web
+@inject IAuthenticationService authenticationService
+@inject NavigationManager navigationManager
+
+<section id="hero">
+
+    <div class="container">
+        <div class="row justify-content-between">
+            <div class="col-lg-7 pt-5 pt-lg-0 order-2 order-lg-1 d-flex align-items-center">
+                <div data-aos="zoom-out">
+                    <h1>Login</h1>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <svg class="hero-waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28 " preserveAspectRatio="none">
+        <defs>
+            <path id="wave-path" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+        </defs>
+        <g class="wave1">
+            <use xlink:href="#wave-path" x="50" y="3" fill="rgba(255,255,255, .1)" />
+        </g>
+        <g class="wave2">
+            <use xlink:href="#wave-path" x="50" y="0" fill="rgba(255,255,255, .2)" />
+        </g>
+        <g class="wave3">
+            <use xlink:href="#wave-path" x="50" y="9" fill="#fff" />
+        </g>
+    </svg>
+
+</section>
+
+<EditForm Model="UserForAuthentication" OnValidSubmit="LoginUser" class="pt-4">
+    <DataAnnotationsValidator/>
+    @if (ShowAuthenticationErrors)
+    {
+        <p class="center">@Errors</p>
+    }
+    <div class="py-4">
+        <div class=" row form-group ">
+            <div class="col-6 offset-3 ">
+                <div class="card border">
+                    <div class="card-body px-lg-5 pt-4">
+                        <h3 class="col-12 text-success text-center py-2">
+                            <strong>Sign In</strong>
+                        </h3>
+
+                        <hr style="background-color:aliceblue" />
+
+                        <div class="py-2">
+                            <InputText @bind-Value="UserForAuthentication.UserName" id="email" class="form-control" placeholder="Email..." />
+
+                        </div>
+                        <ValidationMessage For="(()=>UserForAuthentication.UserName)"></ValidationMessage>
+                        <div class="py-2">
+                            <InputText @bind-Value="UserForAuthentication.Password" type="password" id="password" class="form-control" placeholder="Password..." />
+
+                        </div>
+                        <ValidationMessage For="(()=>UserForAuthentication.Password)"></ValidationMessage>
+                        <hr style="background-color:aliceblue" />
+                        @if (IsProcessing)
+                        {
+                            <div class="py-2 text-center">
+                                <button type="submit" class="btn btn-success btn-block"><i class="fas fa-sign-in-alt"></i>Please wait...</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="py-2  text-center">
+                                <button type="submit" class="btn btn-success btn-block"><i class="fas fa-sign-in-alt"></i> Sign in</button>
+                            </div>
+                        }
+                        <div class="py-2  text-center">
+                            <a href="/registration"
+                               class="btn btn-primary text-white mt-3"><i class="fas fa-user-plus"></i> Register</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+
+    private AuthenticationDTO UserForAuthentication = new AuthenticationDTO();
+    public bool IsProcessing { get; set; } = false;
+    public bool ShowAuthenticationErrors { get; set; }
+    public string Errors { get; set; }
+    public string ReturnUrl { get; set; }
+
+    public async Task LoginUser()
+    {
+        ShowAuthenticationErrors = false;
+        IsProcessing = true;
+        var result = await authenticationService.Login(UserForAuthentication);
+        if (result.IsAuthSuccessful)
+        {
+            IsProcessing = false;
+
+            var absoluteUri = new Uri(navigationManager.Uri);
+            var queryParam = HttpUtility.ParseQueryString(absoluteUri.Query);
+            ReturnUrl = queryParam["returnUrl"];
+            if (string.IsNullOrEmpty(ReturnUrl))
+            {
+                navigationManager.NavigateTo("/");
+            }
+            else
+            {
+                navigationManager.NavigateTo("/" + ReturnUrl);
+            }
+        }
+        else
+        {
+            IsProcessing = false;
+            Errors = result.ErrorMessage;
+            ShowAuthenticationErrors = true;
+        }
+    }
+}

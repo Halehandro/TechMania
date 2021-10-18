@@ -1,0 +1,196 @@
+﻿@page "/addition/create"
+@page "/addition/edit/{Id:int}"
+@using Models
+@using Business.Repository.IRepository;
+@using TechMania_Server.Service.IService;
+@inject IAdditionRepository AdditionRepository
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+@inject IFileUpload FileUpload
+
+<div class="row mt-2 mb-5">
+    <h3 class="card-title text-info mb-3 ml-3">@Title Addition</h3>
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <EditForm Model="AdditionModel" OnValidSubmit="HandleAdditionUpsert">
+                    <DataAnnotationsValidator />
+                    @*<ValidationSummary/>*@
+                    <div class="form-group">
+                        <label>Name</label>
+                        <InputText @bind-Value="AdditionModel.Name" class="form-control"></InputText>
+                        <ValidationMessage For="() => AdditionModel.Name"></ValidationMessage>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <InputTextArea rows="3" @bind-Value="AdditionModel.Description" class="form-control"></InputTextArea>
+                        <ValidationMessage For="() => AdditionModel.Description"></ValidationMessage>
+                    </div>
+                    <div class="form-group" style="padding-top:70px;">
+                        <InputFile OnChange="HandleImageUpload" multiple></InputFile>
+                        <div class="row">
+                            @if (IsImageUploadProcessStarted)
+                            {
+                                <div>
+                                    <span><i class="fade fade-spin fa-spinner">Please wait...Images are uploading...</i></span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(AdditionModel.IconStyle))
+                            {
+                                <div class="col-md-2 mt-3">
+                                    <div class="room-image" style="background: url('@AdditionModel.IconStyle') 50% 50%;">
+                                        <span class="room-image-title">@AdditionModel.IconStyle</span>
+                                    </div>
+
+                                    <button type="button" @onclick="()=>DeletePhoto(AdditionModel.IconStyle)" class="btn btn-outline-danger btn-block mt-4">Delete</button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary">@Title</button>
+                        <NavLink href="addition" class="btn btn-secondary">Back</NavLink>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+    private AdditionDTO AdditionModel { get; set; } = new AdditionDTO();
+    private string Title { get; set; } = "Create";
+    public BlazoredTextEditor QuillHtml { get; set; } = new BlazoredTextEditor();
+
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationState { get; set; }
+
+    private bool IsImageUploadProcessStarted { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationState;
+
+        if (!authenticationState.User.IsInRole(Common.SD.Role_Admin))
+        {
+            var uri = new Uri(NavigationManager.Uri);
+            NavigationManager.NavigateTo($"identity/account/login?returnUrl={uri.LocalPath}");
+        }
+
+        if (Id != null)
+        {
+            //updating
+            Title = "Update";
+            AdditionModel = await AdditionRepository.GetAddition(Id.Value);
+        }
+        else
+        {
+            //create
+            AdditionModel = new AdditionDTO();
+        }
+    }
+
+    private async Task HandleAdditionUpsert()
+    {
+        try
+        {
+            if (Title == "Create")
+            {
+                var additionDetailsByName = await AdditionRepository.IsSameNameAdditionAlreadyExists(AdditionModel.Name);
+                if (additionDetailsByName != null)
+                {
+                    //duplicates
+                    await JsRuntime.ToastrError("Addition name already exists.");
+                    return;
+                }
+            }
+
+            if (AdditionModel.Id != 0 && Title == "Update")
+            {
+                //update
+                var updateAdditionResult = await AdditionRepository.UpdateAddition(AdditionModel.Id, AdditionModel);
+
+                await JsRuntime.ToastrSuccess("Addition updated successfully.");
+            }
+            else
+            {
+                //create
+                //AdditionModel.Details = await QuillHtml.GetHTML();
+                var createdResult = await AdditionRepository.CreateAddition(AdditionModel);
+                await JsRuntime.ToastrSuccess("Addition created successfully.");
+            }
+        }
+        catch (Exception ex)
+        {
+            //log exceptions
+            return;
+        }
+
+        NavigationManager.NavigateTo("/addition");
+    }
+
+    private async Task HandleImageUpload(InputFileChangeEventArgs e)
+    {
+        IsImageUploadProcessStarted = true;
+        try
+        {
+            if (e.GetMultipleFiles().Count > 0)
+            {
+                foreach (var file in e.GetMultipleFiles())
+                {
+                    System.IO.FileInfo fileInfo = new System.IO.FileInfo(file.Name);
+                    if (fileInfo.Extension.ToLower() == ".jpg" ||
+                       fileInfo.Extension.ToLower() == ".png" ||
+                       fileInfo.Extension.ToLower() == ".jpeg")
+                    {
+                        var uploadedImagePath = await FileUpload.UploadFile(file);
+                        AdditionModel.IconStyle = uploadedImagePath;
+                    }
+                    else
+                    {
+                        await JsRuntime.ToastrError("Please select .jpg/ .jpeg/ .png file only");
+                        return;
+                    }
+                }
+                if (string.IsNullOrEmpty(AdditionModel.IconStyle))
+                {
+                    await JsRuntime.ToastrError("Image upload failed");
+                    AdditionModel.IconStyle = "";
+                    return;
+                }
+            }
+            IsImageUploadProcessStarted = false;
+        }
+        catch (Exception ex)
+        {
+            await JsRuntime.ToastrError(ex.Message);
+            throw ex;
+        }
+    }
+
+    internal async Task DeletePhoto(string imageUrl)
+    {
+        try
+        {
+            var imageName = imageUrl.Replace($"PhoneImages/", "");
+            var result = FileUpload.DeleteFile(imageName);
+            if (result)
+            {
+                AdditionModel.IconStyle = string.Empty;
+                await JsRuntime.ToastrSuccess("Image deleted successfully");
+            }
+            else
+            {
+                await JsRuntime.ToastrError("Image delete failed");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JsRuntime.ToastrError(ex.Message);
+        }
+
+    }
+
+}

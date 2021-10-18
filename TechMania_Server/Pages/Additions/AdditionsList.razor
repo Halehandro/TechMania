@@ -1,0 +1,87 @@
+﻿@page "/addition"
+@using Models
+@using Business.Repository.IRepository
+@using Radzen
+
+@inject IAdditionRepository AdditionRepository
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+@inject TechMania_Server.Service.IService.IFileUpload FileUpload
+@attribute [Authorize(Roles = Common.SD.Role_Admin)]
+
+<div class="row mt-4">
+    <div class="col-8">
+        <h4 class="card-title text-info">Additions</h4>
+    </div>
+    <div class="col-3 offset-1">
+        <NavLink href="addition/create" class="btn btn-info form-control">Add New Addition</NavLink>
+    </div>
+</div>
+<br />
+<RadzenDataGrid AllowFiltering="true"
+                AllowColumnResize="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                FilterMode="FilterMode.Advanced"
+                PageSize="15" AllowPaging="true" AllowSorting="true"
+                Data="@Additions" TItem="AdditionDTO" ColumnWidth="300px"
+                LogicalFilterOperator="LogicalFilterOperator.Or">
+    <Columns>
+        <RadzenDataGridColumn TItem="AdditionDTO" Property="Name" Filterable="false" Title="Addition name" Frozen="true" Width="100px" TextAlign="TextAlign.Center" />
+        <RadzenDataGridColumn TItem="AdditionDTO" Property="Description" Filterable="false" Title="Description" Frozen="true" Width="100px" TextAlign="TextAlign.Center" />
+        <RadzenDataGridColumn TItem="AdditionDTO" Property="CreatedDate" Filterable="false" Title="Created date" Frozen="true" Width="100px" TextAlign="TextAlign.Center">
+
+            <Template Context="data">
+                @String.Format("{0:d}", data.CreatedDate)
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="AdditionDTO" Property="UpdatedDate" Filterable="false" Title="Last update" Frozen="true" Width="100px" TextAlign="TextAlign.Center">
+
+            <Template Context="data">
+                @String.Format("{0:d}", data.UpdatedDate)
+            </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="AdditionDTO" Property="Id" Title="" Width="30px">
+            <Template Context="data">
+                <NavLink href="@($"/addition/edit/{data.Id}")"><i class="fas fa-edit fa-lg"></i></NavLink>
+            </Template>
+        </RadzenDataGridColumn>
+
+    </Columns>
+</RadzenDataGrid>
+
+<DeleteConfirmation IsParentComponentProcessing="IsProcessing" ConfirmationChanged="ConfirmDelete_Click"></DeleteConfirmation>
+
+@code {
+
+    private List<AdditionDTO> Additions { get; set; } = new List<AdditionDTO>();
+    private int? DeleteAdditionId { get; set; } = null;
+    private bool IsDeleteProcessComplete { get; set; } = false;
+    private bool IsProcessing { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Additions = await AdditionRepository.GetAllAdditions();
+        Additions = Additions.OrderByDescending(x=>x.Id).ToList();
+    }
+    private async Task HandleDelete(int phoneId)
+    {
+        DeleteAdditionId = phoneId;
+        IsDeleteProcessComplete = false;
+        await JsRuntime.InvokeVoidAsync("ShowDeleteConfirmationModal");
+    }
+
+    public async Task ConfirmDelete_Click(bool isConfirmed)
+    {
+        IsProcessing = true;
+        if (isConfirmed && DeleteAdditionId != null)
+        {
+            AdditionDTO smartPhone = await AdditionRepository.GetAddition(DeleteAdditionId.Value);
+
+            await AdditionRepository.DeleteAddition(DeleteAdditionId.Value, "test");
+            await JsRuntime.ToastrSuccess("Addition Deleted successfully");
+            Additions = await AdditionRepository.GetAllAdditions();
+        }
+        await JsRuntime.InvokeVoidAsync("HideDeleteConfirmationModal");
+        IsProcessing = false;
+    }
+}

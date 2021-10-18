@@ -1,0 +1,26 @@
+﻿@using TechMania_Server.Model
+
+        <tr>
+            <td>
+                <input type="text" name="name" @bind-value="Phone.PhoneName" @bind-value:event="oninput" />
+            </td>
+            <td>
+                <input type="number" name="name" @bind-value="Phone.PhonePrice" @bind-value:event="oninput" />
+            </td>
+            <td>
+                <input type="number" name="name" @bind-value="Phone.PhoneAvailable" @bind-value:event="oninput" />
+            </td>
+            @foreach (var PhoneProp in Phone.PhoneProps)
+            {
+                <td>@PhoneProp.Name - @PhoneProp.Value</td>
+            }
+        </tr>
+    <EditDeleteButton isAdmin="true"></EditDeleteButton>
+
+
+@code {
+
+    [Parameter]
+    public BlazorPhone Phone { get; set; }
+
+}

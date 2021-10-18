@@ -1,0 +1,161 @@
+﻿@page "/"
+@inject ILocalStorageService localStorage
+@inject IJSRuntime jsRuntime
+@inject NavigationManager navigationManager
+@inject ISmartPhoneService smartphoneService
+@inject IAdditionsService additionsService
+@inject Microsoft.Extensions.Configuration.IConfiguration config
+    <!-- ======= Hero Section ======= -->
+<section id="hero">
+
+    <div class="container">
+        <div class="row justify-content-between">
+            <div class="col-lg-7 pt-5 pt-lg-0 order-2 order-lg-1 d-flex align-items-center">
+                <div data-aos="zoom-out">
+                    <h1>Welcome to store <span>TechMania</span></h1>
+                    <h2>We offer great deals and best smartphones on the market</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <svg class="hero-waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28 " preserveAspectRatio="none">
+        <defs>
+            <path id="wave-path" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+        </defs>
+        <g class="wave1">
+            <use xlink:href="#wave-path" x="50" y="3" fill="rgba(255,255,255, .1)" />
+        </g>
+        <g class="wave2">
+            <use xlink:href="#wave-path" x="50" y="0" fill="rgba(255,255,255, .2)" />
+        </g>
+        <g class="wave3">
+            <use xlink:href="#wave-path" x="50" y="9" fill="#fff" />
+        </g>
+    </svg>
+
+</section><!-- End Hero -->
+<!-- ======= Testimonials Section ======= -->
+<!-- ======= Team Section ======= -->
+<section id="team" class="team">
+    <div class="container">
+
+        <div class="section-title" data-aos="fade-up">
+            <h2>Search</h2>
+            <p>Search for your desired product phone</p>
+        </div>
+        <EditForm Model="HomeModel" OnValidSubmit="SaveInitialData">
+            <div class="row" data-aos="fade-left">
+
+                <div class="col-lg-4 col-md-4">
+                    <label>Manufacturer</label>
+                    <InputText type="text" id="Manufacturer" @bind-Value="HomeModel.Manufacturer" name="Manufacturer" class="form-control" />
+
+                </div>
+                <div class="col-lg-4 col-md-4">
+                    <label>Quantity</label>
+                    <select class="form-control">
+                        @for (var i = 1; i <= 10; i++)
+                        {
+                            <option value="@i">@i</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-lg-4 col-md-4 text-center">
+                    <label>&nbsp;</label>
+                    <input type="submit" value="Search" class="btn btn-success btn-block mt-4" />
+                </div>
+
+            </div>
+        </EditForm>
+    </div>
+</section><!-- End Team Section -->
+<TechMania_Client.Pages.SmartPhones.AllSmartPhonesList></TechMania_Client.Pages.SmartPhones.AllSmartPhonesList>
+<!-- ======= About Section ======= -->
+<section id="about" class="about">
+    <div class="container-fluid">
+
+        <div class="row">
+            <div class="col-xl-5 col-lg-6 video-box d-flex justify-content-center align-items-stretch" data-aos="fade-right">
+                <a href="https://www.youtube.com/watch?v=MnrJzXM7a6o&ab_channel=JohnSchroter" class="venobox play-btn mb-4" data-vbtype="video" data-autoplay="true"></a>
+            </div>
+
+            <div class="col-xl-7 col-lg-6 icon-boxes d-flex flex-column align-items-stretch justify-content-center py-5 px-lg-5" data-aos="fade-left">
+                <h3>We provide one of the best shopping experiences</h3>
+                <p>Our offer to our customers is one of the best on the market</p>
+
+                <div class="icon-box" data-aos="zoom-in" data-aos-delay="100">
+                    <div class="icon"><i class="bx bx-fingerprint"></i></div>
+                    <h4 class="title"><a href="">Security payments</a></h4>
+                    <p class="description">We offer to our customers safe payments and loyal service</p>
+                </div>
+
+                <div class="icon-box" data-aos="zoom-in" data-aos-delay="200">
+                    <div class="icon"><i class="bx bx-gift"></i></div>
+                    <h4 class="title"><a href="">Fast shipments</a></h4>
+                    <p class="description">Our products can be shipped in less than 24h if you purchase an item before 14:00</p>
+                </div>
+
+                <div class="icon-box" data-aos="zoom-in" data-aos-delay="300">
+                    <div class="icon"><i class="bx bx-atom"></i></div>
+                    <h4 class="title"><a href="">Partners</a></h4>
+                    <p class="description">We cooparate with many well known manufacturers</p>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</section><!-- End About Section -->
+<!-- ======= Features Section ======= -->
+<section id="features" class="features">
+    <div class="container">
+
+        <div class="section-title" data-aos="fade-up">
+            <h2>Features</h2>
+            <p>Check The Features</p>
+        </div>
+
+        <div class="row" data-aos="fade-left">
+            @foreach (var item in Additions)
+            {
+                <div class="col-lg-3 col-md-4 mt-4">
+                    <div class="icon-box" data-aos="zoom-in" data-aos-delay="350">
+                        <i class="ri-file-list-3-line" style="color: #11dbcf;"></i>
+                        <h3><a href="">@item.Name</a></h3>
+                    </div>
+                </div>
+            }
+
+        </div>
+
+    </div>
+</section><!-- End Features Section -->
+
+@code{
+
+    public HomeVM HomeModel { get; set; } = new HomeVM();
+    public IEnumerable<AdditionDTO> Additions { get; set; } = new List<AdditionDTO>();
+    private bool IsProcessing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsProcessing = true;
+        Additions = await additionsService.GetAdditions();
+        IsProcessing = false;
+    }
+
+    private async Task SaveInitialData()
+    {
+        try
+        {
+
+            await localStorage.SetItemAsync(SD.Local_InitialBooking, HomeModel);
+            navigationManager.NavigateTo("/smartphones/smartphone");
+        }
+        catch (Exception e)
+        {
+            await jsRuntime.ToastrError(e.Message);
+        }
+    }
+}
